@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
+<title>CallDaddy</title>
+<link rel="manifest" href="/manifest.json"/>
+<meta name="theme-color" content="#2563eb"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="CallDaddy"/>
+<link rel="apple-touch-icon" href="/icon-192.png"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--p:#2563eb;--pd:#1d4ed8;--g:#16a34a;--r:#dc2626;--bg:#f1f5f9;--card:#fff;--txt:#1e293b;--sub:#64748b;--bdr:#e2e8f0;--rad:14px;--sh:0 2px 12px rgba(0,0,0,.09)}
+body{font-family:system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;max-width:480px;margin:0 auto;overflow-x:hidden}
+.scr{display:none;min-height:100vh;padding:16px}
+.scr.active{display:block}
+.hidden{display:none!important}
+/* ─ Login ─ */
+#loginScr{display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e3a8a 0%,#2563eb 100%)}
+.login-box{background:#fff;border-radius:24px;padding:40px 28px;width:100%;max-width:360px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.login-logo{font-size:48px;margin-bottom:8px}
+.login-title{font-size:28px;font-weight:800;color:var(--p);margin-bottom:4px}
+.login-sub{font-size:14px;color:var(--sub);margin-bottom:28px}
+.terms-row{display:flex;gap:10px;align-items:flex-start;text-align:left;font-size:13px;margin-bottom:20px;cursor:pointer}
+.terms-row input{margin-top:2px;width:16px;height:16px;flex-shrink:0;accent-color:var(--p)}
+.terms-row a{color:var(--p)}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;padding:15px;border:1.5px solid var(--bdr);border-radius:50px;background:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:.2s}
+.btn-google:hover:not(:disabled){background:#eff6ff}
+.btn-google:disabled{opacity:.45;cursor:not-allowed}
+.btn-google img{width:22px}
+.login-note{font-size:12px;color:var(--sub);margin-top:18px;line-height:1.5}
+/* ─ Setup ─ */
+.pg-head{margin-bottom:20px}
+.pg-head h2{font-size:22px;font-weight:700}
+.pg-head p{font-size:13px;color:var(--sub);margin-top:4px}
+.card{background:var(--card);border-radius:var(--rad);padding:20px;box-shadow:var(--sh);margin-bottom:16px}
+.fg{margin-bottom:16px}
+.fg label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--sub)}
+.fg input{width:100%;padding:13px 14px;border:1.5px solid var(--bdr);border-radius:10px;font-size:15px;outline:none;transition:.2s;background:#fafafa}
+.fg input:focus{border-color:var(--p);background:#fff}
+.hint{font-size:11px;color:var(--sub);margin-top:4px}
+.form-err{color:var(--r);font-size:13px;margin-top:10px}
+.form-ok{color:var(--g);font-size:13px;margin-top:10px;padding:10px;background:#f0fdf4;border-radius:8px}
+/* ─ Buttons ─ */
+.btn{display:block;width:100%;padding:15px;border:none;border-radius:50px;font-size:15px;font-weight:700;cursor:pointer;text-align:center;transition:.2s}
+.btn-p{background:var(--p);color:#fff}.btn-p:hover{background:var(--pd)}
+.btn-o{background:transparent;color:var(--p);border:1.5px solid var(--p);margin-bottom:12px}
+.btn-sm{padding:10px 20px;font-size:13px;border-radius:50px;border:none;cursor:pointer;font-weight:600}
+.btn-back{background:none;border:none;color:var(--p);font-size:15px;cursor:pointer;padding:4px 0;margin-bottom:12px}
+/* ─ Topbar ─ */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 0;margin-bottom:12px}
+.topbar-title{font-size:22px;font-weight:800;color:var(--p)}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.dnd-wrap{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600}
+.sw{position:relative;display:inline-block;width:42px;height:22px}
+.sw input{opacity:0;width:0;height:0}
+.sl{position:absolute;cursor:pointer;inset:0;background:#ccc;border-radius:22px;transition:.3s}
+.sl::before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+input:checked+.sl{background:var(--r)}
+input:checked+.sl::before{transform:translateX(20px)}
+.ico-btn{background:none;border:none;font-size:20px;cursor:pointer}
+/* ─ Profile card ─ */
+.prof-card{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:var(--rad);padding:14px;box-shadow:var(--sh);margin-bottom:18px}
+.avatar{width:48px;height:48px;background:var(--p);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:800;flex-shrink:0}
+.prof-name{font-size:17px;font-weight:700}
+.prof-stat{font-size:12px;color:var(--g);margin-top:2px}
+/* ─ QR cards ─ */
+.sec-title{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.qr-card{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:var(--rad);padding:12px;box-shadow:var(--sh);margin-bottom:10px;cursor:pointer;transition:.15s}
+.qr-card:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.qr-thumb{width:58px;height:58px;border-radius:8px;border:1px solid var(--bdr);object-fit:contain}
+.qr-info{flex:1}.qr-code{font-family:monospace;font-size:13px;font-weight:700;letter-spacing:1px}
+.qr-badge{font-size:10px;padding:2px 8px;border-radius:12px;margin:3px 0;display:inline-block}
+.badge-ph{background:#eff6ff;color:var(--p)}.badge-di{background:#f0fdf4;color:var(--g)}
+.qr-cnt{font-size:11px;color:var(--sub)}
+.empty{text-align:center;padding:40px 16px;color:var(--sub);line-height:1.8}
+.act-btns{display:flex;flex-direction:column;gap:10px;padding-bottom:32px}
+/* ─ QR Detail ─ */
+.qr-detail{background:var(--card);border-radius:var(--rad);padding:24px;text-align:center;box-shadow:var(--sh)}
+.qr-big{width:220px;height:220px;border-radius:12px;border:2px solid var(--bdr);margin:0 auto 14px}
+.qr-codel{font-family:monospace;font-size:17px;font-weight:800;letter-spacing:2px;margin-bottom:18px}
+/* ─ Incoming call overlay ─ */
+.call-overlay{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;z-index:9999}
+.call-box{background:#0f172a;border-radius:24px;padding:36px 28px;text-align:center;color:#fff;width:90%;max-width:320px}
+.call-ring{font-size:56px;animation:ring 1s infinite}
+@keyframes ring{0%,100%{transform:rotate(-12deg)}50%{transform:rotate(12deg)}}
+.call-box h3{font-size:20px;margin:14px 0 6px}
+.call-box p{color:#94a3b8;margin-bottom:28px;font-size:13px}
+.call-btns{display:flex;justify-content:center;gap:40px}
+.ca,.cd{width:68px;height:68px;border-radius:50%;border:none;font-size:26px;color:#fff;cursor:pointer}
+.ca{background:var(--g)}.cd{background:var(--r)}
+/* ─ Spinner ─ */
+.loader-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh}
+.spin{width:36px;height:36px;border:4px solid var(--bdr);border-top-color:var(--p);border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* ─ Modals ─ */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;justify-content:center;z-index:8000}
+.modal{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:24px;max-height:90vh;overflow-y:auto}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:12px}
+.modal p,.modal li{font-size:13px;line-height:1.7;color:var(--sub);margin-bottom:6px}
+.modal ul{padding-left:18px}
+.modal-close{float:right;background:none;border:none;font-size:20px;cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOADING ═══ -->
+<div id="loadScr" class="scr active">
+  <div class="loader-wrap"><div class="spin"></div></div>
+</div>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="loginScr" class="scr" style="display:none">
+  <div class="login-box">
+    <div class="login-logo">📞</div>
+    <div class="login-title">CallDaddy</div>
+    <div class="login-sub">Safe. Silent. Connected.</div>
+    <label class="terms-row">
+      <input type="checkbox" id="tCheck"/>
+      <span>I agree to the <a href="#" onclick="showModal('termsModal')">Terms</a> &amp; <a href="#" onclick="showModal('policyModal')">Privacy Policy</a></span>
+    </label>
+    <button class="btn-google" id="gBtn" disabled onclick="doLogin()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
+      Continue with Google
+    </button>
+    <p class="login-note">By continuing you confirm you are 18+ and agree to use CallDaddy responsibly.</p>
+  </div>
+</div>
+
+<!-- ═══ SETUP ═══ -->
+<div id="setupScr" class="scr">
+  <div class="pg-head"><h2>Complete Your Profile</h2><p>Stored encrypted. Never shown to anyone.</p></div>
+  <div class="card">
+    <div class="fg"><label>Your Name (English letters)</label>
+      <input type="text" id="iName" placeholder="e.g. Rahul Sharma" maxlength="50" oninput="this.value=this.value.replace(/[^a-zA-Z\s]/g,'')"/>
+    </div>
+    <div class="fg"><label>Your Mobile Number</label>
+      <input type="tel" id="iMobile" placeholder="10-digit mobile" maxlength="15" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+    </div>
+    <div class="fg"><label>Emergency Contact 1 <span style="color:var(--r)">*</span></label>
+      <input type="tel" id="iEm1" placeholder="Emergency number" maxlength="15" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+    </div>
+    <div class="fg"><label>Emergency Contact 2 <span style="color:var(--sub);font-size:11px">(optional)</span></label>
+      <input type="tel" id="iEm2" placeholder="Optional" maxlength="15" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+    </div>
+    <button class="btn btn-p" id="saveBtn" onclick="saveProfile()">Save &amp; Continue</button>
+    <p id="setupErr" class="form-err hidden"></p>
+  </div>
+</div>
+
+<!-- ═══ HOME ═══ -->
+<div id="homeScr" class="scr">
+  <div class="topbar">
+    <span class="topbar-title">CallDaddy</span>
+    <div class="topbar-right">
+      <div class="dnd-wrap">
+        <span id="dndLbl">DND</span>
+        <label class="sw"><input type="checkbox" id="dndSw" onchange="toggleDND()"/><span class="sl"></span></label>
+      </div>
+      <button class="ico-btn" onclick="confirmLogout()">⚙️</button>
+    </div>
+  </div>
+  <div class="prof-card">
+    <div class="avatar" id="hAvatar">C</div>
+    <div><div class="prof-name" id="hName">Loading...</div><div class="prof-stat">Profile Active ✓</div></div>
+  </div>
+  <div class="sec-title">My QR Codes</div>
+  <div id="qrEmpty" class="empty hidden"><p>No QR codes yet.</p><p>Activate a physical sticker or generate a digital one.</p></div>
+  <div id="qrList"></div>
+  <div class="act-btns">
+    <button class="btn btn-o" onclick="showScr('activScr')">📦 Activate Physical QR</button>
+    <button class="btn btn-p" onclick="buyDigitalQR()">🎯 Get Digital QR — ₹199</button>
+  </div>
+  <!-- Incoming call overlay -->
+  <div id="callOv" class="call-overlay hidden">
+    <div class="call-box">
+      <div class="call-ring">📞</div>
+      <h3>Incoming Call</h3>
+      <p id="callLbl">Someone scanned your QR</p>
+      <div class="call-btns">
+        <button class="cd" onclick="declineCall()">✕</button>
+        <button class="ca" onclick="acceptCall()">✓</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ACTIVATE ═══ -->
+<div id="activScr" class="scr">
+  <button class="btn-back" onclick="showScr('homeScr')">← Back</button>
+  <div class="pg-head"><h2>Activate Physical QR</h2></div>
+  <div class="card">
+    <div class="fg"><label>QR Code on your sticker</label>
+      <input type="text" id="actCode" placeholder="SQ-XXXX-XXXX" maxlength="12" style="text-transform:uppercase;letter-spacing:2px;font-family:monospace" oninput="fmtQR(this)"/>
+    </div>
+    <button class="btn btn-p" onclick="activateQR()">Activate QR</button>
+    <p id="actMsg" class="hidden"></p>
+  </div>
+</div>
+
+<!-- ═══ QR DETAIL ═══ -->
+<div id="detailScr" class="scr">
+  <button class="btn-back" onclick="showScr('homeScr')">← Back</button>
+  <div class="pg-head"><h2>QR Code</h2></div>
+  <div class="qr-detail">
+    <img id="dImg" src="" alt="QR" class="qr-big"/>
+    <div class="qr-codel" id="dCode"></div>
+    <button class="btn btn-p" style="margin-bottom:12px" onclick="dlQR()">⬇ Download QR</button>
+    <p style="font-size:13px;color:var(--sub)">Scanned <strong id="dCnt">0</strong> times</p>
+  </div>
+</div>
+
+<!-- ═══ TERMS MODAL ═══ -->
+<div id="termsModal" class="modal-bg hidden" onclick="if(event.target===this)hideModal('termsModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="hideModal('termsModal')">✕</button>
+    <h2>Terms &amp; Conditions</h2>
+    <p><strong>1. Eligibility</strong> — You must be 18+.</p>
+    <p><strong>2. Use</strong> — CallDaddy is for legitimate emergency contact only. No harassment, spam, scam, or obscene communication.</p>
+    <p><strong>3. Anti-Abuse</strong> — Calls: 60 sec max. 2 calls/hour/QR. 3 abuse reports → permanent block.</p>
+    <p><strong>4. Legal</strong> — Scan logs retained 1 year per CERT-In 2022. Disclosed to law enforcement on valid request.</p>
+    <p><strong>5. Payments</strong> — Digital QR (₹199) non-refundable once generated.</p>
+    <p><strong>6. Account Deletion</strong> — Delete anytime from settings. Legal logs retained.</p>
+  </div>
+</div>
+
+<!-- ═══ PRIVACY MODAL ═══ -->
+<div id="policyModal" class="modal-bg hidden" onclick="if(event.target===this)hideModal('policyModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="hideModal('policyModal')">✕</button>
+    <h2>Privacy Policy</h2>
+    <p><strong>Data We Collect:</strong> Google name/email, encrypted phone numbers (AES-256), scan IP hashes, call durations.</p>
+    <p><strong>What We DON'T Store:</strong> Voice recordings, chat messages (RAM only, auto-deleted), your number shown to callers (never).</p>
+    <p><strong>Your Rights (DPDP Act 2023):</strong> Access, correct, delete your data anytime.</p>
+    <p><strong>Security:</strong> HTTPS, AES-256-GCM encryption, JWT httpOnly cookies, rate limiting.</p>
+    <p><strong>Contact:</strong> privacy@calldaddy.in</p>
+  </div>
+</div>
+
+<audio id="ringtone" src="/ringtone.mp3" loop preload="auto"></audio>
+<audio id="remoteAudio" autoplay></audio>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="/app.js"></script>
+<script>
+// Login screen toggle
+document.getElementById('tCheck').addEventListener('change', e => {
+  document.getElementById('gBtn').disabled = !e.target.checked;
+});
+function doLogin() {
+  sessionStorage.setItem('termsAccepted','1');
+  window.location.href='/auth/google';
+}
+function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+function hideModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// Show error from URL
+const qs = new URLSearchParams(window.location.search);
+if (qs.get('error')) {
+  alert(qs.get('error') === 'auth_failed' ? 'Login failed. Try again.' : 'Something went wrong.');
+}
+</script>
+</body>
+</html>
