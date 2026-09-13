@@ -1,0 +1,23 @@
+# Sensitive files
+.env
+*.json.key
+firebase-adminsdk*.json
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# PM2
+.pm2/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
