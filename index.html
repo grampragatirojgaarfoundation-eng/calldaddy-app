@@ -3,83 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CallDaddy - Secure QR</title>
+    <title>CallDaddy Secure Connect</title>
     <link rel="manifest" href="/manifest.json">
+
+    <!-- Google Identity & Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <!-- Firebase SDKs (Compat version for Web Push) -->
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.4.0/firebase-messaging-compat.js"></script>
+
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 0; }
-        .container { max-width: 400px; margin: 0 auto; background: #fff; min-height: 100vh; padding: 20px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .screen { display: none; }
-        .active { display: block; }
-        input, button { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border-radius: 8px; border: 1px solid #ccc; }
-        button { background: #007bff; color: white; border: none; font-weight: bold; cursor: pointer; }
-        button.danger { background: #dc3545; }
-        .chat-box { height: 300px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; background: #fafafa; }
-        .timer { font-size: 24px; text-align: center; font-weight: bold; color: #dc3545; }
-        #emergency-contacts { margin-top: 20px; padding: 10px; background: #ffeeba; border-radius: 8px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #eef2f5; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .app-container { background: white; width: 100%; max-width: 400px; min-height: 100vh; padding: 20px; box-sizing: border-box; box-shadow: 0 0 15px rgba(0,0,0,0.1); position: relative; }
+        @media (min-width: 480px) { .app-container { min-height: auto; border-radius: 12px; margin: 20px 0; } }
+        .screen { display: none; text-align: center; }
+        .screen.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        h2 { color: #333; margin-bottom: 5px; }
+        p { color: #666; font-size: 14px; margin-bottom: 20px; }
+        input[type="text"] { width: 100%; padding: 14px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 15px; }
+        button { width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 8px; background: #007bff; color: white; font-size: 16px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button:active { transform: scale(0.98); }
+        button:disabled { background: #ccc !important; cursor: not-allowed; }
+        .chat-container { height: 350px; overflow-y: auto; background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 10px; }
+        .g-btn-wrap { display: flex; justify-content: center; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <!-- Screen 1: Google Login (For QR Owners) -->
-    <div id="login-screen" class="screen active">
-        <h2 style="text-align: center;">Welcome to CallDaddy</h2>
-        <p style="text-align: center; color: #666;">Secure, Private & Masked Connecting</p>
-        <div id="g_id_onload"
-             data-client_id="48981611712-cph3ipjfjq4lc59eusalcmsp6rg9t62f.apps.googleusercontent.com"
-             data-callback="handleCredentialResponse"
-             data-auto_prompt="false">
+    <div class="app-container">
+
+        <div id="loading-screen" class="screen active">
+            <h2>⏳ Loading...</h2><p>Please wait while we connect securely.</p>
         </div>
-        <div class="g_id_signin" data-type="standard" data-size="large" data-theme="outline" data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left"></div>
-    </div>
 
-    <!-- Screen 2: Owner Profile Setup (First Time) -->
-    <div id="profile-screen" class="screen">
-        <h2>Setup Profile</h2>
-        <input type="text" id="owner-name" placeholder="Full Name (English Letters Only)" maxlength="50" oninput="this.value = this.value.replace(/[^a-zA-Z\s]/g, '')">
-        <input type="tel" id="owner-mobile" placeholder="Primary Mobile Number" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-        <input type="tel" id="em-mobile-1" placeholder="Emergency Number 1" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-        <input type="tel" id="em-mobile-2" placeholder="Emergency Number 2 (Optional)" maxlength="15" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-        <button onclick="saveProfile()">Save & Activate App</button>
-    </div>
-
-    <!-- Screen 3: Scanner UI (When someone scans the QR) -->
-    <div id="scanner-screen" class="screen">
-        <h2>Contact Vehicle Owner</h2>
-        <p style="color: green; font-size: 14px;">Connection is 100% Private & Masked.</p>
-        <input type="tel" id="scanner-mobile" placeholder="Enter your 10-digit number to connect" maxlength="10" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-        
-        <button onclick="initiateCall()">📞 Call Owner (Free WiFi/Data)</button>
-        <button onclick="showChat()" style="background: #28a745;">💬 Send Message</button>
-        
-        <div id="emergency-contacts" style="display: none;">
-            <h4>Emergency Contacts</h4>
-            <a id="em-link-1" href="#" style="display:block; text-decoration: none; color: #d32f2f; font-weight: bold;">Dial Emergency 1</a>
-            <a id="em-link-2" href="#" style="display:none; text-decoration: none; color: #d32f2f; font-weight: bold; margin-top:10px;">Dial Emergency 2</a>
+        <div id="home-screen" class="screen">
+            <h2>Welcome to CallDaddy</h2><p>Scan a vehicle's QR code to contact the owner, or login to manage your own QR.</p>
+            <div class="g-btn-wrap" id="owner-login-btn-wrapper"></div>
         </div>
+
+        <div id="login-screen" class="screen">
+            <h2>Activate your QR</h2><p>This QR sticker is brand new. Login with Google to claim and activate it.</p>
+            <div class="g-btn-wrap" id="google-btn-wrapper"></div>
+        </div>
+
+        <div id="profile-screen" class="screen">
+            <h2>Complete Profile</h2><p>Enter your details so scanners can reach you.</p>
+            <input type="text" id="owner-name" placeholder="Your Name (e.g. Rahul)" maxlength="30">
+            <input type="text" id="owner-mobile" placeholder="Mobile Number (Optional)" maxlength="15">
+            <button id="save-btn" onclick="saveProfile()" style="background: #28a745;">Save & Activate QR</button>
+        </div>
+
+        <div id="my-qrs-screen" class="screen">
+            <h2>Select QR to Manage</h2><p>You have multiple QR stickers. Select one to proceed.</p>
+            <div id="my-qrs-list"></div>
+        </div>
+
+        <div id="owner-home-screen" class="screen">
+            <h2 id="owner-status-title">✅ Active & Listening</h2>
+            <div id="active-qr-display" style="margin-bottom: 15px; color: #555; font-size: 14px;"></div>
+
+            <div id="notification-warning" style="display: none; background: #fff3cd; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ffeeba; color: #856404; text-align: left; font-size: 14px;">
+                <b>⚠️ Important:</b> Call notifications are disabled. You will miss calls when the app is closed.
+                <button onclick="requestNotificationAccess()" style="background:#ffc107; color:#000; padding: 10px; margin-top: 10px;">Enable Notifications</button>
+            </div>
+
+            <div style="text-align: left; font-weight: bold; margin-top: 10px;">Name:</div>
+            <input type="text" id="update-name" maxlength="30">
+            <div style="text-align: left; font-weight: bold;">Mobile:</div>
+            <input type="text" id="update-mobile" maxlength="15">
+
+            <label style="display: block; text-align: left; margin: 15px 0; font-size: 16px; font-weight: bold; cursor: pointer;">
+                <input type="checkbox" id="update-dnd" style="transform: scale(1.5); margin-right: 10px;"> Do Not Disturb (DND)
+            </label>
+
+            <button onclick="updateProfile()" style="background: #007bff;">Update Settings</button>
+            <button onclick="openMessages()" style="background: #17a2b8;">View Chat Messages</button>
+            <button onclick="logoutOwner()" style="background: #dc3545; margin-top: 20px;">Logout</button>
+        </div>
+
+        <div id="scanner-screen" class="screen">
+            <h2 style="margin-top: 40px;">Contact Vehicle Owner</h2><p>Your connection is 100% private and secure.</p>
+            <div id="scanner-dnd-warning" style="display:none; background: #ffeeba; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 20px;">
+                Owner is currently on Do Not Disturb. Calls are disabled.
+            </div>
+            <button id="btn-call-owner" onclick="initiateCall()" style="background: #28a745; padding: 20px; font-size: 18px;">📞 Call Owner</button>
+            <button onclick="showChat()" style="background: #007bff; padding: 20px; font-size: 18px;">💬 Message Owner</button>
+        </div>
+
+        <div id="call-screen" class="screen">
+            <h2 style="margin-top: 50px;">Secure Call</h2>
+            <h1 id="call-timer" style="color: #007bff; margin: 30px 0;">Connecting...</h1>
+            <button onclick="endCall(true)" style="background: #dc3545; padding: 20px; border-radius: 50px; margin-top: 40px;">End Call ❌</button>
+        </div>
+
+        <div id="incoming-call-screen" class="screen">
+            <h2 style="margin-top: 40px; color: #28a745;">📞 Incoming Call</h2>
+            <p style="font-size: 18px; margin: 30px 0;">Someone is near your vehicle and calling you.</p>
+            <button onclick="acceptCall()" style="background: #28a745; padding: 20px; font-size: 18px; border-radius: 50px; margin-bottom: 20px;">✅ Answer</button>
+            <button onclick="rejectCall()" style="background: #dc3545; padding: 15px; font-size: 16px; border-radius: 50px;">❌ Reject</button>
+        </div>
+
+        <div id="chat-screen" class="screen">
+            <h2>Chat with Owner</h2>
+            <div id="chat-box" class="chat-container"></div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="chat-input" placeholder="Type a message..." style="margin: 0; flex: 1;">
+                <button onclick="sendMessage()" style="margin: 0; width: 80px; background: #28a745;">Send</button>
+            </div>
+            <button onclick="endSession()" style="background: #6c757d; margin-top: 20px;">End Chat & Exit</button>
+        </div>
+
+        <div id="owner-messages-screen" class="screen">
+            <button class="back-btn dashboard-link" onclick="loadOwnerDashboard()" style="background: #6c757d; margin-bottom: 15px; padding: 10px;">⬅ Back to Dashboard</button>
+            <h2>Scanner Messages</h2>
+            <div id="owner-messages-list" class="chat-container"></div>
+            <div style="display: flex; gap: 10px;">
+                <input type="text" id="owner-chat-input" placeholder="Reply to scanner..." style="margin: 0; flex: 1;">
+                <button onclick="sendOwnerMessage()" style="margin: 0; width: 80px; background: #28a745;">Reply</button>
+            </div>
+        </div>
+
     </div>
 
-    <!-- Screen 4: Active Call UI -->
-    <div id="call-screen" class="screen">
-        <h2 style="text-align: center;">Secure Call Active</h2>
-        <div class="timer" id="call-timer">01:00</div>
-        <p style="text-align: center; color: #666;">Call will automatically disconnect in 60 seconds.</p>
-        <button class="danger" onclick="endCall()">End Call</button>
-        <audio id="remote-audio" autoplay></audio>
-    </div>
+    <!-- Hidden Audio Elements -->
+    <audio id="remote-audio" autoplay></audio>
+    <audio id="ringtone-audio" src="https://www.soundjay.com/phone/sounds/telephone-ring-03a.mp3" loop preload="auto"></audio>
 
-    <!-- Screen 5: Chat UI -->
-    <div id="chat-screen" class="screen">
-        <h2>Secure Chat</h2>
-        <div class="chat-box" id="chat-box"></div>
-        <input type="text" id="chat-input" placeholder="Type message (Max 500 chars)" maxlength="500" oninput="this.value = this.value.replace(/[^a-zA-Z0-9\s]/g, '')">
-        <button onclick="sendMessage()">Send</button>
-        <button class="danger" onclick="endSession()">End Session</button>
-    </div>
-</div>
+    <!-- FIREBASE SETUP -->
+    <script>
+        firebase.initializeApp({
+            apiKey: "AIzaSyD1IglO0fuaIh9TYZLqAm4LDUJsCYN9h5Q",
+            authDomain: "calldaddy-63149.firebaseapp.com",
+            projectId: "calldaddy-63149",
+            storageBucket: "calldaddy-63149.firebasestorage.app",
+            messagingSenderId: "154336897139",
+            appId: "1:154336897139:web:bc27a1a50bc7d8c5a4a206"
+        });
+        const messaging = firebase.messaging();
 
-<script src="/app.js"></script>
+        window.getFirebaseToken = async () => {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    const currentToken = await messaging.getToken({
+                        vapidKey: "BOlLHyPGdnAYYp3xNuhdRGr3ni0m-sNCgNriFS2CI_-1Ixs9xWaaTrY-B3tgjERs80PC-Gs5s7Bnhzr1qJF7Wtw"
+                    });
+                    return currentToken;
+                }
+            } catch (err) { console.error('Firebase Token Error: ', err); }
+            return null;
+        };
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
+        }
+    </script>
+    <script src="/app.js"></script>
 </body>
 </html>

@@ -1,0 +1,180 @@
+module.exports = {
+    apps: [{
+        name: 'calldaddy-prod',
+        script: 'server.js',
+        instances: 'max',
+        exec_mode: 'cluster',
+        watch: false,
+        max_memory_restart: '500M',
+        env_production: {
+            NODE_ENV: 'production',
+            PORT: 4000
+        },
+        error_file: './logs/error.log',
+        out_file: './logs/out.log',
+        log_date_format: 'YYYY-MM-DD HH:mm:ss'
+    }]
+};
+appuser@vps3533344:~/calldaddy-app$ cat admin.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CallDaddy - Admin Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input, button { padding: 10px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #007bff; color: white; }
+        .badge-unregistered { background: #ffc107; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+        .badge-active { background: #28a745; color: white; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+        .qr-preview { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; }
+        .qr-card { border: 2px dashed #007bff; padding: 10px; border-radius: 8px; text-align: center; background: #fff; width: 140px; }
+        @media print { .no-print { display: none; } }
+    </style>
+</head>
+<body>
+
+<div class="card no-print">
+    <h2>CallDaddy Admin Panel</h2>
+    <input type="password" id="adminSecret" placeholder="Enter ADMIN_SECRET password" style="width: 300px;">
+    <button onclick="loadQrs()">Login & Load Data</button>
+</div>
+
+<div id="adminContent" style="display:none;">
+    <div class="card no-print">
+        <h3>Generate New Bulk QR Codes</h3>
+        <input type="text" id="prefix" value="CD" placeholder="Prefix (e.g. CD)">
+        <input type="number" id="startNum" value="1001" placeholder="Start Number">
+        <input type="number" id="count" value="10" placeholder="Quantity">
+        <button onclick="generateQrs()">Generate & Save in DB</button>
+        <button onclick="window.print()" style="background: #28a745;">Print Generated QRs</button>
+    </div>
+
+    <div class="card">
+        <h3>Generated QR Printable Stickers</h3>
+        <div id="qrPrintArea" class="qr-preview"></div>
+    </div>
+
+    <div class="card no-print">
+        <h3>Database Records</h3>
+        <table id="qrTable">
+            <thead>
+                <tr>
+                    <th>QR ID</th>
+                    <th>Status</th>
+                    <th>Assigned User</th>
+                    <th>Mobile</th>
+                    <th>Link</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let adminSecret = '';
+
+async function loadQrs() {
+    adminSecret = document.getElementById('adminSecret').value.trim();
+    if (!adminSecret) return alert("Please enter admin secret key");
+
+    try {
+        const res = await fetch('/api/admin/qrs', {
+            headers: { 'x-admin-secret': adminSecret }
+        });
+        const data = await res.json();
+
+        if (!data.success) {
+            return alert(data.error || "Invalid Password");
+        }
+
+        document.getElementById('adminContent').style.display = 'block';
+        renderTable(data.qrs);
+        renderPrintQrs(data.qrs);
+    } catch(e) {
+        alert("Failed to load admin data.");
+    }
+}
+
+async function generateQrs() {
+    const prefix = document.getElementById('prefix').value;
+    const startNum = document.getElementById('startNum').value;
+    const count = document.getElementById('count').value;
+
+    try {
+        const res = await fetch('/api/admin/generate-qrs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': adminSecret
+            },
+            body: JSON.stringify({ prefix, startNum, count })
+        });
+        const data = await res.json();
+        alert(data.message);
+        loadQrs();
+    } catch(e) {
+        alert("Generation failed.");
+    }
+}
+
+function renderTable(qrs) {
+    const tbody = document.querySelector('#qrTable tbody');
+    tbody.innerHTML = '';
+    qrs.forEach(q => {
+        const link = `https://calldaddy.in/?qr=${q.qrId}`;
+        const row = `<tr>
+            <td><b>${q.qrId}</b></td>
+            <td><span class="badge-${q.status}">${q.status.toUpperCase()}</span></td>
+            <td>${q.user ? q.user.name : '-'}</td>
+            <td>${q.user ? q.user.mobile : '-'}</td>
+            <td><a href="${link}" target="_blank">${link}</a></td>
+            <td><button onclick="deleteQr('${q.qrId}')" style="background:red; padding:4px 8px;">Delete</button></td>
+        </tr>`;
+        tbody.innerHTML += row;
+    });
+}
+
+function renderPrintQrs(qrs) {
+    const printArea = document.getElementById('qrPrintArea');
+    printArea.innerHTML = '';
+    qrs.forEach(q => {
+        const container = document.createElement('div');
+        container.className = 'qr-card';
+        const link = `https://calldaddy.in/?qr=${q.qrId}`;
+
+        const qrdiv = document.createElement('div');
+        new QRCode(qrdiv, { text: link, width: 120, height: 120 });
+
+        const textDiv = document.createElement('div');
+        textDiv.innerHTML = `<div style="font-weight:bold; margin-top:5px;">${q.qrId}</div><div style="font-size:10px;">CallDaddy.in</div>`;
+
+        container.appendChild(qrdiv);
+        container.appendChild(textDiv);
+        printArea.appendChild(container);
+    });
+}
+
+async function deleteQr(qrId) {
+    if (!confirm(`Are you sure you want to delete ${qrId}?`)) return;
+    await fetch('/api/admin/delete-qr', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-admin-secret': adminSecret
+        },
+        body: JSON.stringify({ qrId })
+    });
+    loadQrs();
+}
+</script>
+</body>
+</html>
